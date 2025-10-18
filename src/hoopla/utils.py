@@ -3,6 +3,9 @@ from typing import Any, Dict, List, Set
 
 from hoopla.config import DATA_DIR
 
+BM25_K1 = 1.5
+BM25_B = 0.75
+
 
 def load_movies() -> List[Dict[str, Any]]:
     with open(DATA_DIR / "movies.json", mode="r", encoding="utf-8") as f:
