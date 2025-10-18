@@ -1,25 +1,35 @@
-import json
 import string
 from typing import Dict, List
 
-from hoopla.config import DATA_DIR
+from nltk.stem import PorterStemmer
+
+from hoopla.utils import load_movies, load_stopwords
 
 
-def keyword_search(ref_title: str) -> List[Dict[str, str]]:
-    punctuation_translator = str.maketrans({punc: "" for punc in string.punctuation})
+def keyword_search(query: str) -> List[Dict[str, str]]:
+    query_tokens = tokenize_text(query)
 
-    ref_title = ref_title.lower()
-    ref_title = ref_title.translate(punctuation_translator)
-
+    movie_database = load_movies()
     movie_matches = []
-    with open(DATA_DIR / "movies.json", mode="r", encoding="utf-8") as f:
-        movie_database: List[Dict[str, str]] = json.load(f)["movies"]
-
     for movie in movie_database:
-        movie_title = movie["title"].lower()
-        movie_title = movie_title.translate(punctuation_translator)
+        movie_title = movie["title"]
+        movie_title_tokens = tokenize_text(movie_title)
 
-        if ref_title in movie_title:
-            movie_matches.append(movie)
+        for movie_title_token in movie_title_tokens:
+            if any(query_token in movie_title_token for query_token in query_tokens):
+                movie_matches.append(movie)
+                break
 
     return sorted(movie_matches, key=lambda x: x["id"])
+
+
+def tokenize_text(text: str) -> List[str]:
+    punctuation_translator = str.maketrans({punc: "" for punc in string.punctuation})
+    text = text.lower()
+    text = text.translate(punctuation_translator)
+
+    tokens = text.split()
+    stopwords = load_stopwords()
+    stemmer = PorterStemmer()
+    tokens = [stemmer.stem(token) for token in tokens if token not in stopwords]
+    return tokens
