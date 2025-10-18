@@ -1,4 +1,5 @@
 import pickle
+from collections import Counter
 from typing import Any, Dict, List, Set
 
 from hoopla.config import PROJECT_ROOT
@@ -19,20 +20,31 @@ class InvertedIndex:
         """
         self.docmap: Dict[int, Dict[str, Any]] = {}
         self.index: Dict[str, Set[int]] = {}
+        self.term_frequencies: Dict[int, Counter] = {}
 
     def __add_document(self, doc_id: int, text: str) -> None:
         tokens = tokenize_text(text)
+        if doc_id not in self.term_frequencies:
+            self.term_frequencies[doc_id] = Counter()
         for token in tokens:
             if token in self.index:
                 self.index[token].add(doc_id)
             else:
                 self.index[token] = {doc_id}
 
+            self.term_frequencies[doc_id][token] += 1
+
     def get_documents(self, term: str) -> List[int]:
         if term not in self.index:
             return []
         doc_ids: Set[int] = self.index[term.strip().lower()]
         return sorted(list(doc_ids))
+
+    def get_tf(self, doc_id: int, term: str) -> int:
+        tokens = tokenize_text(term)
+        if len(tokens) != 1:
+            raise Exception("there should be a single token in term")
+        return self.term_frequencies[doc_id][tokens[0]]
 
     def build(self) -> None:
         """
@@ -51,6 +63,8 @@ class InvertedIndex:
             pickle.dump(self.index, f)
         with open(cache_dir / "docmap.pkl", mode="wb") as f:
             pickle.dump(self.docmap, f)
+        with open(cache_dir / "term_frequencies.pkl", mode="wb") as f:
+            pickle.dump(self.term_frequencies, f)
 
     def load(self) -> None:
         cache_dir = (PROJECT_ROOT / "cache").resolve()
@@ -59,3 +73,5 @@ class InvertedIndex:
             self.index = pickle.load(f)
         with open(cache_dir / "docmap.pkl", mode="rb") as f:
             self.docmap = pickle.load(f)
+        with open(cache_dir / "term_frequencies.pkl", mode="rb") as f:
+            self.term_frequencies = pickle.load(f)
