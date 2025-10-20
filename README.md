@@ -15,9 +15,6 @@ uv pip install -e .
 source .venv/bin/activate # On a Linux distro
 ```
 
-```
-```
-
 ## Run
 
 ### Keywords search

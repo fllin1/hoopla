@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import sys
 
 from hoopla.inverted_index import InvertedIndex
 from hoopla.keyword_search import tokenize_text
