@@ -1,12 +1,11 @@
 import math
 import pickle
 from collections import Counter
-from itertools import islice
-from typing import Any, Callable, Dict, List, Set
+from typing import Any, Callable
 
 from hoopla.config import CACHE_DIR
 from hoopla.keyword_search import tokenize_text
-from hoopla.utils import BM25_B, BM25_K1, load_movies
+from hoopla.utils import BM25_B, BM25_K1, format_search_result, load_movies
 
 
 def text_single_token(text: str) -> str:
@@ -27,10 +26,10 @@ class InvertedIndex:
         A "forward index" maps location -> value. (docmap)
         An "inverted index" maps value -> location. (index)
         """
-        self.docmap: Dict[int, Dict[str, Any]] = {}
-        self.index: Dict[str, Set[int]] = {}
-        self.term_frequencies: Dict[int, Counter] = {}
-        self.doc_lengths: Dict[int, int] = {}
+        self.docmap: dict[int, dict[str, Any]] = {}
+        self.index: dict[str, set[int]] = {}
+        self.term_frequencies: dict[int, Counter] = {}
+        self.doc_lengths: dict[int, int] = {}
 
     def __add_document(self, doc_id: int, text: str) -> None:
         tokens = tokenize_text(text)
@@ -59,10 +58,10 @@ class InvertedIndex:
             total_doc_length += length
         return total_doc_length / len(self.doc_lengths)
 
-    def get_documents(self, term: str) -> List[int]:
+    def get_documents(self, term: str) -> list[int]:
         if term not in self.index:
             return []
-        doc_ids: Set[int] = self.index[term.strip().lower()]
+        doc_ids: set[int] = self.index[term.strip().lower()]
         return sorted(list(doc_ids))
 
     def get_tf(self, doc_id: int, term: str) -> int:
@@ -93,7 +92,7 @@ class InvertedIndex:
     def bm25(self, doc_id: int, term: str) -> float:
         return self.get_bm25_idf(term) * self.get_bm25_tf(doc_id, term)
 
-    def bm25_search(self, query: str, limit: int) -> Dict[int, float]:
+    def bm25_search(self, query: str, limit: int) -> list[dict]:
         tokens = tokenize_text(query)
         scores = {}
         for token in tokens:
@@ -102,8 +101,18 @@ class InvertedIndex:
                 if doc_id not in scores:
                     scores[doc_id] = 0
                 scores[doc_id] += self.bm25(doc_id, token)
-        scores = dict(sorted(scores.items(), key=lambda x: x[1], reverse=True))
-        return dict(islice(scores.items(), limit))
+        results = []
+        for id, score in scores.items():
+            document = self.docmap[id]
+            results.append(
+                format_search_result(
+                    doc_id=id,
+                    title=document["title"],
+                    document=document["description"],
+                    score=score,
+                )
+            )
+        return sorted(results, key=lambda x: x["score"], reverse=True)[:limit]
 
     def build(self) -> None:
         movies_database = load_movies()

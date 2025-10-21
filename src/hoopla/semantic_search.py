@@ -1,13 +1,13 @@
-from typing import Callable, Dict, List, Optional
 import json
+import re
+from typing import Callable, Dict, List, Optional
 
 import numpy as np
 from numpy.typing import NDArray
 from sentence_transformers import SentenceTransformer
-import re
 
 from hoopla.config import CACHE_DIR
-from hoopla.utils import load_movies, format_search_result
+from hoopla.utils import format_search_result, load_movies
 
 
 def _cosine_similarity(vec1: NDArray, vec2: NDArray) -> float:
@@ -122,12 +122,13 @@ class ChunkedSemanticSearch(SemanticSearch):
                 for i in range(len(desc_chunks))
             )
         self.chunk_embeddings = self.model.encode(all_chunks, show_progress_bar=True)
-        self.chunk_metadata = chunk_metadata
+        self.chunk_metadata = {
+            "chunks": chunk_metadata,
+            "total_chunks": len(all_chunks),
+        }
         np.save(CACHE_DIR / "chunk_embeddings.npy", self.chunk_embeddings)
         with open(CACHE_DIR / "chunk_metadata.json", mode="w", encoding="utf-8") as f:
-            json.dump(
-                {"chunks": chunk_metadata, "total_chunks": len(all_chunks)}, f, indent=2
-            )
+            json.dump(self.chunk_metadata, f, indent=2)
         return self.chunk_embeddings
 
     def load_or_create_chunk_embeddings(self, documents: List[dict]) -> NDArray:

@@ -1,5 +1,7 @@
 # Local files
+/cache
 /data
+/models
 
 # Python-generated files
 __pycache__/

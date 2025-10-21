@@ -100,11 +100,10 @@ def main() -> None:
         case "bm25search":
             inv_idx.load()
             bm25_search = inv_idx.bm25_search(args.query, args.limit)
-            idx = 1
-            for doc_id, score in bm25_search.items():
-                title = inv_idx.docmap[doc_id]["title"]
-                print(f"{idx}. ({doc_id}) {title} - Score: {score:.2f}")
-                idx += 1
+            for idx, result in enumerate(bm25_search):
+                print(
+                    f"{idx + 1}. ({result['id']}) {result['title']} - Score: {result['score']:.2f}"
+                )
 
         case _:
             parser.print_help()
