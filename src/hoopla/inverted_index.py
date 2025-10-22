@@ -96,6 +96,8 @@ class InvertedIndex:
         tokens = tokenize_text(query)
         scores = {}
         for token in tokens:
+            if token not in self.index:
+                continue
             doc_ids = self.index[token]
             for doc_id in doc_ids:
                 if doc_id not in scores:

@@ -1,7 +1,9 @@
+from typing import Optional
+
 from hoopla.config import CACHE_DIR
 from hoopla.inverted_index import InvertedIndex
 from hoopla.semantic_search import ChunkedSemanticSearch
-from hoopla.utils import format_search_result, load_movies
+from hoopla.utils import call_gemini, format_search_result, load_movies
 
 
 def normalize(scores: list[float]) -> list[float]:
@@ -138,9 +140,17 @@ def weighted_search_command(query: str, alpha: float, limit: int) -> None:
         print(f"   {result['document'][:77]}...")
 
 
-def rrf_search_command(query: str, k: int, limit: int) -> None:
+def rrf_search_command(
+    query: str, k: int, limit: int, enhance: Optional[str] = None
+) -> None:
     documents = load_movies()
     hybrid_search = HybridSearch(documents)
+
+    if enhance is not None:
+        old_query = query
+        query = call_gemini(old_query, enhance)
+        print(f"Enhanced query ({enhance}): '{old_query}' -> '{query}'")
+
     scores = hybrid_search.rrf_search(query, k, limit)
     for i, result in enumerate(scores):
         metadata = result["metadata"]

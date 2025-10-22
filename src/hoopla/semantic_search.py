@@ -96,8 +96,8 @@ class SemanticSearch:
 class ChunkedSemanticSearch(SemanticSearch):
     def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
         super().__init__(model_name)
-        self.chunk_embeddings: Optional[NDArray] = None
-        self.chunk_metadata: Optional[List[dict]] = None
+        self.chunk_embeddings: NDArray = np.ndarray(0)
+        self.chunk_metadata: dict = {}
 
     def build_chunk_embeddings(self, documents: List[dict]) -> NDArray:
         self.documents = documents
@@ -138,9 +138,9 @@ class ChunkedSemanticSearch(SemanticSearch):
         path_chunk_embed = CACHE_DIR / "chunk_embeddings.npy"
         path_chunk_meta = CACHE_DIR / "chunk_metadata.json"
         if path_chunk_embed.exists() and path_chunk_meta.exists():
-            self.chunk_embeddings: NDArray = np.load(path_chunk_embed)
+            self.chunk_embeddings = np.load(path_chunk_embed)
             with open(path_chunk_meta, mode="r", encoding="utf-8") as f:
-                self.chunk_metadata: dict = json.load(f)
+                self.chunk_metadata = json.load(f)
             return self.chunk_embeddings
         return self.build_chunk_embeddings(documents)
 
