@@ -1,4 +1,8 @@
+import json
+import time
 from typing import Optional
+
+from sentence_transformers import CrossEncoder
 
 from hoopla.config import CACHE_DIR
 from hoopla.inverted_index import InvertedIndex
@@ -140,21 +144,102 @@ def weighted_search_command(query: str, alpha: float, limit: int) -> None:
         print(f"   {result['document'][:77]}...")
 
 
+def _rerank_method_individual(query: str, results: list[dict]) -> list[dict]:
+    print("\nReranking method (individual)")
+    for i, result in enumerate(results):
+        for j in range(3):
+            time.sleep(5)
+            try:
+                score = call_gemini(
+                    "individual",
+                    query=query,
+                    title=result.get("title", ""),
+                    document=result.get("document", ""),
+                )
+                score = int(score)
+                break
+            except Exception as e:
+                print(f"\nFailed attempt {j + 1}: {e}")
+                print("retry...")
+        assert isinstance(score, int), f"score {score} should be type int"
+        assert score >= 0 and score <= 10, f"score {score} expected in [1, 10]"
+        results[i]["rerank_score"] = score
+    return sorted(results, key=lambda x: x["rerank_score"], reverse=True)
+
+
+def _rerank_method_batch(query: str, results: list[dict]) -> list[dict]:
+    print("\nReranking method (batch)")
+    doc_list_str = ("---").join(
+        [
+            f"\nID: {result['id']}\nTitle: {result['title']}\nDescription: {result['document']}"
+            for result in results
+        ]
+    )
+    for i in range(3):
+        try:
+            rank_ids_json = call_gemini("batch", query=query, doc_list_str=doc_list_str)
+            break
+        except Exception as e:
+            print(f"\nFailed attempt {i + 1}: {e}")
+            print("retry...")
+            time.sleep(10)
+    rank_ids_json = rank_ids_json.replace("```json", "").replace("```", "")
+    rank_ids: list = json.loads(rank_ids_json)
+    for i, result in enumerate(results):
+        results[i]["rerank_rank"] = rank_ids.index(int(result["id"]))
+    return sorted(results, key=lambda x: x["rerank_rank"])
+
+
+def _rerank_method_cross_encoder(query: str, results: list[dict]) -> list[dict]:
+    pairs = [
+        [query, f"{doc.get('title', '')} - {doc.get('document', '')}"]
+        for doc in results
+    ]
+    cross_encoder = CrossEncoder(
+        "cross-encoder/ms-marco-TinyBERT-L2-v2", cache_folder="./models"
+    )
+    scores = cross_encoder.predict(pairs)
+    for i, score in enumerate(scores):
+        results[i]["cross_encoder_score"] = score
+    return sorted(results, key=lambda x: x["cross_encoder_score"], reverse=True)
+
+
 def rrf_search_command(
-    query: str, k: int, limit: int, enhance: Optional[str] = None
+    query: str,
+    k: int,
+    limit: int,
+    enhance: Optional[str] = None,
+    rerank_method: Optional[str] = None,
 ) -> None:
     documents = load_movies()
     hybrid_search = HybridSearch(documents)
 
     if enhance is not None:
         old_query = query
-        query = call_gemini(old_query, enhance)
+        query = call_gemini(enhance, query=old_query)
         print(f"Enhanced query ({enhance}): '{old_query}' -> '{query}'")
 
-    scores = hybrid_search.rrf_search(query, k, limit)
-    for i, result in enumerate(scores):
+    search_limit = limit * 5 if rerank_method is not None else limit
+    results = hybrid_search.rrf_search(query, k, search_limit)
+
+    match rerank_method:
+        case "individual":
+            results = _rerank_method_individual(query, results)
+        case "batch":
+            results = _rerank_method_batch(query, results)
+        case "cross_encoder":
+            results = _rerank_method_cross_encoder(query, results)
+
+    for i in range(limit):
+        result = results[i]
         metadata = result["metadata"]
         print(f"{i + 1}. {result['title']}")
+        if "rerank_score" in result:
+            print(f"   Rerank score: {result['rerank_score']}")
+        elif "rerank_rank" in result:
+            print(f"   Rerank rank: {result['rerank_rank']}")
+        elif "cross_encoder_score" in result:
+            print(f"   Cross encoder score: {result['cross_encoder_score']}")
         print(f"   RRF score: {result['score']:.3f}")
         print(
             f"   BM25: {metadata['keyword_score']:.3f}, semantic: {metadata['semantic_score']:.3f}"

@@ -46,6 +46,8 @@ class InvertedIndex:
     def __compute_idf_function(
         self, token: str, func: Callable[[int, int], float]
     ) -> float:
+        if token not in self.index:
+            return 0
         doc_count = len(self.docmap)
         term_doc_count = len(self.index[token])
         return func(doc_count, term_doc_count)
