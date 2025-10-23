@@ -204,12 +204,28 @@ def _rerank_method_cross_encoder(query: str, results: list[dict]) -> list[dict]:
     return sorted(results, key=lambda x: x["cross_encoder_score"], reverse=True)
 
 
+def _evaluate_rrf_search(query: str, results: list[dict]) -> None:
+    titles = [doc["title"] for doc in results]
+    scores = [doc["score"] for doc in results]
+    formatted_results = [
+        f"Movie: {title} was scored {score}" for title, score in zip(titles, scores)
+    ]
+    evaluations = call_gemini(
+        "evaluate", query=query, formatted_results=chr(10).join(formatted_results)
+    )
+    evaluations = evaluations.replace("```json", "").replace("```", "")
+    evaluations = json.loads(evaluations)
+    for i, title in enumerate(titles):
+        print(f"{i + 1}. {title}: {evaluations[i]}/3")
+
+
 def rrf_search_command(
     query: str,
     k: int,
     limit: int,
     enhance: Optional[str] = None,
     rerank_method: Optional[str] = None,
+    evaluate: Optional[bool] = False,
 ) -> None:
     documents = load_movies()
     hybrid_search = HybridSearch(documents)
@@ -245,3 +261,6 @@ def rrf_search_command(
             f"   BM25: {metadata['keyword_score']:.3f}, semantic: {metadata['semantic_score']:.3f}"
         )
         print(f"   {result['document'][:77]}...")
+
+    if evaluate:
+        _evaluate_rrf_search(query, results)
