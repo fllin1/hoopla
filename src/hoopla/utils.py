@@ -56,6 +56,12 @@ def format_search_result(
     }
 
 
+def gemini_client() -> genai.Client:
+    load_dotenv()
+    api_key = os.environ.get("GEMINI_API_KEY")
+    return genai.Client(api_key=api_key)
+
+
 def _load_prompt_enchance() -> dict[str, str]:
     prompts_path = CLI_DIR / "method_prompts.json"
     with open(prompts_path, mode="r", encoding="utf-8") as f:
@@ -64,9 +70,7 @@ def _load_prompt_enchance() -> dict[str, str]:
 
 
 def call_gemini(method: Optional[str] = None, **kwargs) -> str:
-    load_dotenv()
-    api_key = os.environ.get("GEMINI_API_KEY")
-    client = genai.Client(api_key=api_key)
+    client = gemini_client()
 
     prompts = _load_prompt_enchance()
     if method in prompts:

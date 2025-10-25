@@ -1,7 +1,5 @@
 import argparse
 
-from torch import t
-
 from hoopla.augmented_generation import augmented_generation_command
 
 
