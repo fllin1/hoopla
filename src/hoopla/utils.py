@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Set
 from dotenv import load_dotenv
 from google import genai
 
-from hoopla.config import DATA_DIR
+from hoopla.config import CLI_DIR, DATA_DIR
 
 BM25_K1 = 1.5
 BM25_B = 0.75
@@ -57,7 +57,7 @@ def format_search_result(
 
 
 def _load_prompt_enchance() -> dict[str, str]:
-    prompts_path = DATA_DIR / "prompts" / "method_prompts.json"
+    prompts_path = CLI_DIR / "method_prompts.json"
     with open(prompts_path, mode="r", encoding="utf-8") as f:
         method_prompts = json.load(f)
     return method_prompts
@@ -70,7 +70,10 @@ def call_gemini(method: Optional[str] = None, **kwargs) -> str:
 
     prompts = _load_prompt_enchance()
     if method in prompts:
+        print(f"Using the prompt method `{method}`")
         query = prompts[method].format(**kwargs)
+    else:
+        query = kwargs["query"]
 
     try:
         response = client.models.generate_content(

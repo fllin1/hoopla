@@ -1,5 +1,7 @@
 import argparse
 
+from torch import t
+
 from hoopla.augmented_generation import augmented_generation_command
 
 
@@ -21,6 +23,18 @@ def main():
         "--limit", type=int, default=5, help="Limit of results"
     )
 
+    citation_parser = subparsers.add_parser(
+        "citations", help="Add citation to the output"
+    )
+    citation_parser.add_argument("query", type=str, help="Search query")
+    citation_parser.add_argument(
+        "--limit", type=int, default=5, help="Limit of results"
+    )
+
+    question_parser = subparsers.add_parser("question", help="Let me doubt that")
+    question_parser.add_argument("question", type=str, help="The doubt that you have")
+    question_parser.add_argument("--limit", type=int, default=5, help="Doubt limit")
+
     args = parser.parse_args()
 
     match args.command:
@@ -28,6 +42,10 @@ def main():
             augmented_generation_command("rag", args.query, args.limit)
         case "summarize":
             augmented_generation_command("summarize", args.query, args.limit)
+        case "citations":
+            augmented_generation_command("citations", args.query, args.limit)
+        case "question":
+            augmented_generation_command("question", args.question, args.limit)
         case _:
             parser.print_help()
 

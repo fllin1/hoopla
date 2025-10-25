@@ -23,4 +23,8 @@ def augmented_generation_command(method: str, query: str, limit: int = 5):
             print("\nRAG Response:")
         case "summarize":
             print("\nLLM Summary:")
+        case "citations":
+            print("\nLLM Answer:")
+        case "question":
+            print("Answer")
     print(rag_response)
