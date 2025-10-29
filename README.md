@@ -2,6 +2,10 @@
 
 Modern search engine techniques implemented end-to-end: keyword (BM25), semantic (embeddings), hybrid fusion (weighted, RRF), multimodal (image→text), and LLM-enhanced retrieval (RAG with Gemini). Includes CLIs, caching, and evaluation utilities.
 
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![Google Gemini](https://img.shields.io/badge/google%20gemini-8E75B2?style=for-the-badge&logo=google%20gemini&logoColor=white)
+![Hugging Face](https://img.shields.io/badge/-HuggingFace-FDEE21?style=for-the-badge&logo=HuggingFace&logoColor=black)
+
 ## Features
 - **Keyword search (BM25)**: Tokenization, stemming, stopwording, inverted index with TF/IDF, BM25, caching.
 - **Semantic search**: SentenceTransformers embeddings, cosine similarity, optional description chunking.
